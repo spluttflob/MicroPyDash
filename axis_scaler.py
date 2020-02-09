@@ -53,7 +53,7 @@ class AxisScaler:
     def niceNum (self, vrange, do_round = True):
         """ Returns a "nice" number approximately equal to #c vrange. Rounds 
         the number if @c round == @c True. Takes the ceiling if 
-        @c do_round == @c false.
+        @c do_round == @c False.
         @param vrange The data range
         @param do_round Whether to round the result
         @return a "nice" Number to be used for the data range

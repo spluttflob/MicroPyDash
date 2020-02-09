@@ -7,6 +7,11 @@
         MicroPython platforms which would like to serve data on web pages
         without requiring anything but a browser on a PC or phone to use. 
 
+        This is @b absolutely @b not a high-performance real-time plotting
+        library. It is for comparatively low performance plotting in the sense
+        that plots should be updated on browser screens on a timescale of 
+        seconds, not milliseconds. 
+
     @author JR Ridgely
 
     @date 2020-Jan-25 JRR Original file
@@ -107,6 +112,8 @@ class MicroPyDash:
 # -----------------------------------------------------------------------------
 
 if __name__ == "__main__":
+    
+    import math
 
     # A reference to a file to which text will be printed instead of sending it
     # through a web interface. This makes for handy debugging, as a browser can
@@ -134,7 +141,7 @@ if __name__ == "__main__":
             # Create the dashboard object, using writing to a file to send HTML
             dash = MicroPyDash (sender=file_sender)
 
-            # Create a meter
+            # Create a meter --------------------------------------------------
             minny = -100.0
             maxie = 100.0
             meter0 = upd_meter.Meter (10, 10, 250, 200, border=False,
@@ -152,31 +159,48 @@ if __name__ == "__main__":
             dash.add_widget (meter1)
             meter1.value = 0.123
 
-            # Let's try a scrolling(?) plot
+            # Let's try a static plot -----------------------------------------
             plot0 = upd_plot.Plot (0, 0, 420, 320, title="It's a Plot", 
-                                   traces=1, buffer_size=10)
+                                   num_traces=2)
             dash.add_widget (plot0)
 
-            x_data = [t / 10 for t in range (10)]
-            x_scaled = [t * 100 for t in x_data]
-            y_data = [x * x for x in x_data]
-            plot0.set_data ([x_scaled, y_data])
+            x_data = [t / 55 for t in range (120)]
+            x_scaled = [t * 200 for t in x_data]
+            y0_data = [x * x - x * x * x / 2.1 for x in x_data]
+            y1_data = [math.sin (6.283 * t) for t in x_data]
 
-            # Have things redraw a few times for testing purposes
-            for count in range (1):
+            plot0.set_data (x_scaled, [y0_data, y1_data])
+            plot0.traces[0].lines = True
+            plot0.traces[0].markers = False
+
+            # Try a scrolling plot --------------------------------------------
+            SIZE1 = 20
+            plot1 = upd_plot.Plot (0, 0, 400, 300, title="Scroll Me",
+                                   x_label="Exiness", y_label="Y Bother",
+                                   num_traces=1, scrolling=SIZE1)
+            dash.add_widget (plot1)
+
+            # Have things redraw one or more times for testing purposes
+            simtime = 0.0
+            for count in range (SIZE1 * 2):
 
                 true_value = ((maxie + minny) / 2) \
                              + ((random.random () - 0.5) * (maxie - minny))
                 meter0.value = true_value
 
-                meter1.value += 0.375
+                meter1.value += 0.1375
+
+                # Put another point into the scrolling plot
+                simy = math.sin (simtime)
+                plot1.add_data (simtime, [simy])
+                simtime += 0.3125
 
                 # Have the dash draw itself, then snooze a bit
                 da_file.seek (0)
                 da_file.truncate ()
                 dash.draw ()
                 da_file.flush ()
-                time.sleep (2.0)
+                time.sleep (1.2)
 
     test ()
 
