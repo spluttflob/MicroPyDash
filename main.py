@@ -14,11 +14,14 @@
 """
 
 import gc
+import utime
 import socket
 import network
 import machine
 import micropydash
 import upd_meter
+import upd_base
+import upd_plot
 import hx711
 
 
@@ -72,6 +75,17 @@ meter0 = upd_meter.Meter (10, 10, 250, 200, border=False,
                           units=" FU", arc_angle=180)
 dash.add_widget (meter0)
 
+# Try a line break ------------------------------------------------
+break0 = upd_base.LineBreak ()
+dash.add_widget (break0)
+
+# Try a scrolling plot --------------------------------------------
+SIZE1 = 50
+aplot = upd_plot.Plot (0, 0, 480, 320, title="Shove History",
+                       x_label="Time", y_label="Pushes (FU's)",
+                       num_traces=1, scrolling=SIZE1)
+dash.add_widget (aplot)
+start_time = utime.ticks_ms ()
 
 # -----------------------------------------------------------------------------
 # Wait for HTTP requests and answer 'em as they arrive
@@ -90,14 +104,18 @@ while True:
         dash.set_sender (client.send)
 
         # Measure the weight and display it
-        meter0.value = (fubar.read () - fubar.OFFSET) / 10000;
+        weight = (fubar.read () - fubar.OFFSET) / 10000
+        meter0.value = weight
+
+        # Add the weight to the plot also
+        aplot.add_data (utime.ticks_ms () - start_time, [weight])
 
         # Have the dashboard do its drawing
         dash.draw ()
 
         client.close ()
         gc.collect ()
-#        print ("Memory free: ", gc.mem_free ())
+        print ("Memory free: ", gc.mem_free ())
 
     except KeyboardInterrupt:
         break

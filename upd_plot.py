@@ -190,8 +190,17 @@ class Plot (upd_base.SVG_item):
         """
         # The vertical grid lines are drawn at each X position
         y_of_x_nums = self.abx_top + self.abx_height + self.tick_label_size
-        for x_tick in self.ticker.generate_ticks (self.min_x, self.max_x, 
-                                                  max_ticks=7):
+
+        # Create a tuple of tick positions in data (not pixel) coordinates.
+        # This doesn't eat too much memory, as there aren't many ticks
+        x_ticks = tuple (self.ticker.generate_ticks (self.min_x, self.max_x, 
+                                                     max_ticks=7))
+        # Bug fix: If the ticks are outside the range of the data, set the
+        # extents of the plot area (in data coordinates) to match the ticks
+        self.min_x = min (self.min_x, x_ticks[0])
+        self.max_x = max (self.max_x, x_ticks[-1])
+
+        for x_tick in x_ticks:
             pix = self.x2pixels (x_tick)
             if self.grid_color is not None:
                 self.draw_line (pix, self.abx_top + self.abx_height, 
@@ -200,8 +209,12 @@ class Plot (upd_base.SVG_item):
             self.draw_text ("{:g}".format (x_tick), pix, y_of_x_nums, 
                             anchor='middle', size=self.tick_label_size)
 
-        for y_tick in self.ticker.generate_ticks (self.min_y, self.max_y, 
-                                                  max_ticks=5):
+        # The horizontal grid lines are drawn at Y ticks. Same bug fix as X
+        y_ticks = tuple (self.ticker.generate_ticks (self.min_y, self.max_y, 
+                                                     max_ticks=5))
+        self.min_y = min (self.min_y, y_ticks[0])
+        self.max_y = max (self.max_y, y_ticks[-1])
+        for y_tick in y_ticks:
             pix = self.y2pixels (y_tick)
             if self.grid_color is not None:
                 self.draw_line (self.abx_left, pix, 
@@ -216,10 +229,6 @@ class Plot (upd_base.SVG_item):
         """ Draw the plot box by creating its SVG image.
         @param sender A callable which sends strings to a file or web browser
         """
-        if self.autoscale:
-            self.autoscale_x ()
-            self.autoscale_y ()
-
         self.header ()
 
         # Draw a box around the plot area and highlight (or low-light) the area
@@ -237,6 +246,10 @@ class Plot (upd_base.SVG_item):
         self.draw_text (self.y_label, 1, self.height // 2,
                         anchor='middle', baseline="hanging", 
                         size=self.ax_label_size, angle=270)
+
+        if self.autoscale:
+            self.autoscale_x ()
+            self.autoscale_y ()
 
         # Draw ticks and tick labels on the axes
         self.draw_grid ()

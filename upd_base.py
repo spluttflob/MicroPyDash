@@ -162,8 +162,8 @@ class SVG_item:
 
     def send (self, a_string):
         """ Send a string or a bytearray to whatever file or network port is
-        used to get the data to a display device. If the data is a Unicode 
-        string, convert it to bytes before sending it. 
+        used to get the data to a display device. If the data is a bunch of
+        bytes, convert it to a string before sending it. 
         @param a_string The string or byte array to be sent
         """
         if self.sender is not None:
@@ -173,5 +173,28 @@ class SVG_item:
                 self.sender (a_string.decode ('UTF-8'))   # Bytes to string
             else:
                 print ("BAD send(): " + str (a_string))
+
+
+# -----------------------------------------------------------------------------
+
+class LineBreak:
+    """ This class implements a newline on the dashboard. When asked to draw
+    itself, it just sends an HTML line break, @c <br>.
+    """
+
+    def __init__ (self):
+        """ It doesn't take much to initialize a line break, so just set up the
+        callable by which we send characters to the HTML client as nothing; the
+        dashboard will set the sender to something when this object is added
+        to the dashboard's widget list.
+        """
+        self.sender = None
+
+
+    def draw (self):
+        """ Render the line break by sending the correct HTML command.
+        """
+        if self.sender is not None:
+            self.sender ("<br>")
 
 

@@ -19,8 +19,10 @@
     @copyright (c) 2020 by JR Ridgely and released under the LGPL V3.
 """
 
+import upd_base
 import upd_meter
 import upd_plot
+import upd_input
 
 
 ## The background color for the page
@@ -45,14 +47,19 @@ class MicroPyDash:
     is needed to operate the dashboard.
     """
 
-    def __init__ (self, sender=None, reload_rate=RELOAD_RATE_SEC):
+    def __init__ (self, title="MicroPython Dashboard", sender=None, 
+                  reload_rate=RELOAD_RATE_SEC):
         """ Initialize the dashboard interface.
+        @param title A string to appear at the top of the dashboard web page
         @param sender A callable which writes HTML to a file or web socket, or
                None if the characters are to be thrown away because no sending
                device is currently ready
+        @param reload_rate How often the web client is told to reload this page
+               in seconds
         """
-        self.sender = sender
+        self.send = sender
         self.reload_rate = reload_rate
+        self.title = title
 
         ## A list of widgets (meters, buttons, etc.)
         self.widgets = []
@@ -63,7 +70,7 @@ class MicroPyDash:
         widget must have already been created, with its size specified. 
         """
         self.widgets.append (new_widget)
-        new_widget.sender = self.sender
+        new_widget.sender = self.send
 
 
     def set_sender (self, new_sender):
@@ -72,7 +79,7 @@ class MicroPyDash:
         weird way HTTP works, it happens frequently.
         @param new_sender A new function which sends characters to the Web
         """
-        self.sender = new_sender
+        self.send = new_sender
         for widget in self.widgets:
             widget.sender = new_sender
 
@@ -81,20 +88,37 @@ class MicroPyDash:
         """ Create an HTML page header. 
         @param a_file The file object to which to print the header
         """
-        self.sender ('<html><body style="background-color:{:s}">'.format (
+        self.send ('<html><head>')
+
+        # If there are buttons present, send their CSS style
+        if upd_input.Button.buttons_present ():
+            self.send ('<style>')
+            self.send ('a.button {{ appearance: button; color:{:s}; '.format (
+                       upd_input.Button.text_color))
+            self.send ('background-color:{:s}; border: none; display:'.format (
+                         upd_input.Button.background_color))
+            self.send (' inline-block; padding: {:d}px {:d}px; '.format (
+                         upd_input.Button.font_size // 2, 
+                         upd_input.Button.font_size))
+            self.send ('font-size: {:d}px; text-decoration: none; }}'.format (
+                         upd_input.Button.font_size))
+            self.send ('</style>')
+
+        self.send ('</head>\n<body style="background-color:{:s}">'.format (
                        BACKGROUND_COLOR))
-        self.sender ('<font face="{:s}">\n'.format (FONT_FAMILY))
-        self.sender ('<font color="{:s}">\n'.format (FONT_COLOR))
-        self.sender ('<meta http-equiv="refresh" content="{:g}">\n'.format (
+        self.send ('<font face="{:s}">\n'.format (FONT_FAMILY))
+        self.send ('<font color="{:s}">\n'.format (FONT_COLOR))
+        self.send ('<meta http-equiv="refresh" content="{:g}">\n'.format (
                        self.reload_rate))
-        self.sender ("<h3>Testing MicroPython Dashboard</h3><br>\r\n")
+
+        self.send ("<h3>{:s}</h3><br>\r\n".format (self.title))
 
 
     def footer (self):
         """ Create a generic HTML page footer.
         @param a_file The file object to which to print the footer
         """
-        self.sender ("</body></html>")
+        self.send ("</body></html>")
 
 
     def draw (self):
@@ -141,7 +165,7 @@ if __name__ == "__main__":
             # Create the dashboard object, using writing to a file to send HTML
             dash = MicroPyDash (sender=file_sender)
 
-            # Create a meter --------------------------------------------------
+            # Create meters ---------------------------------------------------
             minny = -100.0
             maxie = 100.0
             meter0 = upd_meter.Meter (10, 10, 250, 200, border=False,
@@ -159,6 +183,10 @@ if __name__ == "__main__":
             dash.add_widget (meter1)
             meter1.value = 0.123
 
+            # Try a line break ------------------------------------------------
+            break0 = upd_base.LineBreak ()
+            dash.add_widget (break0)
+
             # Let's try a static plot -----------------------------------------
             plot0 = upd_plot.Plot (0, 0, 420, 320, title="It's a Plot", 
                                    num_traces=2)
@@ -173,6 +201,9 @@ if __name__ == "__main__":
             plot0.traces[0].lines = True
             plot0.traces[0].markers = False
 
+#            # Re-add the line break so the plots stack vertically
+#            dash.add_widget (break0)
+
             # Try a scrolling plot --------------------------------------------
             SIZE1 = 20
             plot1 = upd_plot.Plot (0, 0, 400, 300, title="Scroll Me",
@@ -180,9 +211,16 @@ if __name__ == "__main__":
                                    num_traces=1, scrolling=SIZE1)
             dash.add_widget (plot1)
 
-            # Have things redraw one or more times for testing purposes
+            # Re-add the line break
+            dash.add_widget (break0)
+
+            # Try input -------------------------------------------------------
+            button0 = upd_input.Button (None, "Button 0")
+            dash.add_widget (button0)
+
+            # Have things redrawn one or more times for testing purposes
             simtime = 0.0
-            for count in range (SIZE1 * 2):
+            for count in range (SIZE1 * 3 // 2):
 
                 true_value = ((maxie + minny) / 2) \
                              + ((random.random () - 0.5) * (maxie - minny))
